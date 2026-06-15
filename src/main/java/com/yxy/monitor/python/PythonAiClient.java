@@ -16,16 +16,42 @@ import java.util.Map;
 @Component
 public class PythonAiClient {
     @Value("${ai.service.url}")
-    private String aiUrl;
+    private String batchUrl;
 
-    private final RestTemplate restTemplate = new  RestTemplate();
+    private final RestTemplate restTemplate;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public Map<String, Object> predict(String payload){
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        String json = "{\"payload\":\"" + payload.replace("\"", "\\\"") + "\"}";
-        HttpEntity<String> request = new HttpEntity<>(json, headers);
-        return restTemplate.postForObject(aiUrl, request, Map.class);
+    public PythonAiClient(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
+    }
+
+    public List<Map<String, Object>> batchDetect(List<String> urlList){
+        if(urlList == null || urlList.isEmpty()){
+            return List.of();
+        }
+
+        System.out.println("==== 批量检测开始，批次大小：" + urlList.size() + " ====");
+
+        try{
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            Map<String, List<String>> requestBody = new HashMap<>();
+            requestBody.put("url_list", urlList);
+
+            HttpEntity<Map<String, List<String>>> requestEntity = new HttpEntity<>(requestBody, headers);
+            String responseBody = restTemplate.postForObject(batchUrl, requestEntity, String.class);
+
+            List<Map<String, Object>> results = objectMapper.readValue(
+                    responseBody,
+                    new TypeReference<List<Map<String, Object>>>() {}
+            );
+            System.out.println("==== 批量检测完成，返回结果数：" + results.size() + " ====");
+            return results;
+        } catch(Exception e){
+            System.out.println("==== 批量检测接口调用失败:" + e.getMessage() + " ====");
+            return List.of();
+        }
     }
 
 }
