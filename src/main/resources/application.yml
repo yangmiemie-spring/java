@@ -28,3 +28,6 @@ mybatis:
 ai:
   service:
     url: http://127.0.0.1:5000/ai/detect
+jwt:
+  secret: YangMieMie2026MonitorSecretKeyVeryLong1234567890abcdef
+  expire: 86400000 # 24小时过期，单位毫秒
