@@ -25,18 +25,20 @@ public interface NetworkFlowLogMapper {
     /**
      * 按分钟+源IP分组，统计端口数和包数（用于异常检测）
      */
-    @Select("SELECT " +
-            "src_ip AS srcIp, " +
+    /**
+     * 优化版：只查最近1分钟未检测流量 + 走覆盖索引，毫秒级返回
+     */
+    @Select("SELECT src_ip AS srcIp, " +
             "DATE_FORMAT(flow_time, '%Y-%m-%d %H:%i') AS timeMinute, " +
             "COUNT(DISTINCT dest_port) AS portCount, " +
             "COUNT(*) AS packetCount " +
             "FROM network_flow_log " +
-            "WHERE flow_time BETWEEN #{startTime} AND #{endTime} " +
+            "WHERE flow_time >= #{startTime} AND flow_time < #{endTime} " +
             "AND is_abnormal = 0 " +
-            "GROUP BY src_ip, DATE_FORMAT(flow_time, '%Y-%m-%d %H:%i')")
+            "GROUP BY src_ip, timeMinute " +
+            "ORDER BY NULL")
     List<Map<String, Object>> countByIpAndMinute(@Param("startTime") LocalDateTime startTime,
                                                  @Param("endTime") LocalDateTime endTime);
-
     /**
      * 批量标记异常流量
      */
@@ -105,4 +107,27 @@ public interface NetworkFlowLogMapper {
      */
     @Delete("DELETE FROM network_flow_log WHERE flow_time < #{expireTime}")
     void deleteExpiredData(@Param("expireTime") LocalDateTime expireTime);
+
+
+    // tianjia
+    /**
+     * 查询指定时间范围内，每个源IP访问的不同端口数、总数据包数
+     * 只查未检测的正常流量，小范围扫描极快
+     */
+    @Select("SELECT src_ip AS srcIp, COUNT(DISTINCT dest_port) AS portCount, COUNT(*) AS packetCount " +
+            "FROM network_flow_log " +
+            "WHERE flow_time BETWEEN #{startTime} AND #{endTime} AND is_abnormal = 0 " +
+            "GROUP BY src_ip")
+    List<Map<String, Object>> selectIpPortStatByTime(@Param("startTime") LocalDateTime startTime,
+                                                     @Param("endTime") LocalDateTime endTime);
+
+    /**
+     * 批量标记指定IP、指定时间范围内的流量为异常
+     */
+    @Update("UPDATE network_flow_log SET is_abnormal = 1, abnormal_type = #{type} " +
+            "WHERE src_ip = #{srcIp} AND flow_time BETWEEN #{startTime} AND #{endTime} AND is_abnormal = 0")
+    void batchMarkAbnormalByTime(@Param("srcIp") String srcIp,
+                                 @Param("startTime") LocalDateTime startTime,
+                                 @Param("endTime") LocalDateTime endTime,
+                                 @Param("type") String type);
 }

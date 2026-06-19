@@ -5,7 +5,9 @@ import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 public interface WebAttackLogMapper {
     // 新增攻击日志
@@ -27,4 +29,14 @@ public interface WebAttackLogMapper {
     // 无条件统计所有条数
     @Select("SELECT COUNT(*) FROM web_attack_log")
     Long selectAllCount();
+
+     // 插入AI识别的攻击记录
+    @Insert("INSERT INTO web_attack_log(client_ip, request_url, request_method, attack_type, attack_payload, is_block) " +
+            "VALUES(#{clientIp}, #{requestUrl}, #{requestMethod}, #{attackType}, #{attackPayload}, #{isBlock})")
+    void insertAiAttack(@Param("clientIp") String clientIp,
+                        @Param("requestUrl") String requestUrl,
+                        @Param("requestMethod") String requestMethod,
+                        @Param("attackType") String attackType,
+                        @Param("attackPayload") String attackPayload,
+                        @Param("isBlock") Integer isBlock);
 }

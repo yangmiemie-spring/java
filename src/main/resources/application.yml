@@ -11,8 +11,15 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       keepalive-time: 30000
-      idle-timeout: 600000
+      maximum-pool-size: 15
+      # 空闲连接超时，自动回收闲置连接
+      idle-timeout: 60000
+      # 连接最大生命周期，强制销毁旧连接，解决泄漏堆积
       max-lifetime: 1800000
+      # 泄漏检测阈值
+      leak-detection-threshold: 30000
+      # 等待连接超时时间，避免无限阻塞卡死线程
+      connection-timeout: 3000
   batch:
     jdbc:
       initialize-schema: always
