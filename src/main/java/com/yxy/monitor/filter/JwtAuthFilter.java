@@ -30,7 +30,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         // 登录、注册接口直接跳过JWT校验，优先放行
         String uri = request.getRequestURI();
-        if (uri.equals("/api/auth/login") || uri.equals("/api/auth/register")) {
+        if (uri.equals("/api/auth/login") || uri.equals("/api/auth/register") || uri.equals("/api/auth/updatePwd")) {
             filterChain.doFilter(request, response);
             return;
         }

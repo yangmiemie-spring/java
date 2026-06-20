@@ -34,8 +34,8 @@ public class NetworkFlowLogServiceImpl implements NetworkFlowLogService {
     };
 
     // 检测阈值
-    private static final int SCAN_PORT_THRESHOLD = 20;
-    private static final int DDOS_PACKET_THRESHOLD = 500;
+    private static final int SCAN_PORT_THRESHOLD = 2;
+    private static final int DDOS_PACKET_THRESHOLD = 30;
     // 批量提交大小：每1000条commit一次
     private static final int BATCH_SIZE = 1000;
 
@@ -47,9 +47,10 @@ public class NetworkFlowLogServiceImpl implements NetworkFlowLogService {
 
             for (int i = 1; i <= totalCount; i++) {
                 NetworkFlowLog log = new NetworkFlowLog();
+                LocalDateTime fixedMinute = LocalDateTime.now().minusMinutes(random.nextInt(5));
 
-                // 95% 正常流量，5% 攻击流量
-                if (random.nextInt(100) < 95) {
+                // 70% 正常流量，30% 攻击流量
+                if (random.nextInt(100) < 70) {
                     // 正常流量
                     log.setSrcIp(generateNormalIp());
                     log.setDestIp("192.168.1.100");
@@ -57,12 +58,13 @@ public class NetworkFlowLogServiceImpl implements NetworkFlowLogService {
                     log.setDestPort(normalPorts[random.nextInt(normalPorts.length)]);
                     log.setProtocol(protocols[random.nextInt(protocols.length)]);
                     log.setPacketSize(64 + random.nextInt(1400));
-                    log.setFlowTime(generateRandomTime(24));
+                    log.setFlowTime(fixedMinute);
                 } else {
                     // 攻击流量：一半端口扫描，一半DDoS
+                    String attackIp = attackIps[random.nextInt(attackIps.length)];
                     if (random.nextBoolean()) {
                         // 端口扫描：短时间内访问大量不同端口
-                        log.setSrcIp(attackIps[random.nextInt(attackIps.length)]);
+                        log.setSrcIp(attackIp);
                         log.setDestIp("192.168.1.100");
                         log.setSrcPort(1024 + random.nextInt(60000));
                         log.setDestPort(1 + random.nextInt(65535));
@@ -71,7 +73,7 @@ public class NetworkFlowLogServiceImpl implements NetworkFlowLogService {
                         log.setFlowTime(generateRandomTime(1));
                     } else {
                         // DDoS攻击：短时间内发送大量小包
-                        log.setSrcIp(attackIps[random.nextInt(attackIps.length)]);
+                        log.setSrcIp(attackIp);
                         log.setDestIp("192.168.1.100");
                         log.setSrcPort(1024 + random.nextInt(60000));
                         log.setDestPort(80);

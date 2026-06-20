@@ -9,8 +9,9 @@ import java.util.Map;
 
 @Mapper
 public interface NetworkFlowLogMapper {
+
     /**
-     * 单条插入流量数据（和你现有代码写法完全一致）
+     * 单条插入流量数据
      */
     @Insert("INSERT INTO network_flow_log(src_ip, dest_ip, src_port, dest_port, protocol, packet_size, flow_time, is_abnormal) " +
             "VALUES (#{srcIp}, #{destIp}, #{srcPort}, #{destPort}, #{protocol}, #{packetSize}, #{flowTime}, 0)")
@@ -23,10 +24,8 @@ public interface NetworkFlowLogMapper {
     long countUnchecked();
 
     /**
-     * 按分钟+源IP分组，统计端口数和包数（用于异常检测）
-     */
-    /**
-     * 优化版：只查最近1分钟未检测流量 + 走覆盖索引，毫秒级返回
+     * 【优化版】按分钟+源IP分组，统计端口数和包数（异常检测核心方法）
+     * 优化点：统一左闭右开时间范围、ORDER BY NULL跳过排序、走覆盖索引毫秒级返回
      */
     @Select("SELECT src_ip AS srcIp, " +
             "DATE_FORMAT(flow_time, '%Y-%m-%d %H:%i') AS timeMinute, " +
@@ -39,13 +38,15 @@ public interface NetworkFlowLogMapper {
             "ORDER BY NULL")
     List<Map<String, Object>> countByIpAndMinute(@Param("startTime") LocalDateTime startTime,
                                                  @Param("endTime") LocalDateTime endTime);
+
     /**
-     * 批量标记异常流量
+     * 【优化版】批量标记异常流量
+     * 优化点：统一左闭右开时间范围，和查询逻辑对齐，避免漏标记/重复标记
      */
     @Update("UPDATE network_flow_log " +
             "SET is_abnormal = 1, abnormal_type = #{abnormalType} " +
             "WHERE src_ip = #{srcIp} " +
-            "AND flow_time BETWEEN #{startTime} AND #{endTime} " +
+            "AND flow_time >= #{startTime} AND flow_time < #{endTime} " +
             "AND is_abnormal = 0")
     void batchMarkAbnormal(@Param("srcIp") String srcIp,
                            @Param("startTime") LocalDateTime startTime,
@@ -53,7 +54,7 @@ public interface NetworkFlowLogMapper {
                            @Param("abnormalType") String abnormalType);
 
     /**
-     * 统计总流量数、异常数、异常占比
+     * 全量统计总流量、异常数、占比（仅凌晨校准用，禁止前端高频调用）
      */
     @Select("SELECT " +
             "COUNT(*) AS totalFlow, " +
@@ -90,7 +91,7 @@ public interface NetworkFlowLogMapper {
     List<Map<String, Object>> getTopAbnormalIps(@Param("limit") int limit);
 
     /**
-     * 最近24小时流量趋势（折线图用）
+     * 最近24小时流量趋势（小时粒度折线图用）
      */
     @Select("SELECT " +
             "DATE_FORMAT(flow_time, '%Y-%m-%d %H:00') AS hour, " +
@@ -103,31 +104,39 @@ public interface NetworkFlowLogMapper {
     List<Map<String, Object>> getFlowTrend();
 
     /**
+     * 近7天流量趋势（天粒度折线图用，对应你参考的页面效果）
+     */
+    @Select("SELECT " +
+            "DATE(flow_time) AS date, " +
+            "COUNT(*) AS totalCount, " +
+            "SUM(IF(is_abnormal=1, 1, 0)) AS abnormalCount " +
+            "FROM network_flow_log " +
+            "WHERE flow_time >= DATE_SUB(CURDATE(), INTERVAL 6 DAY) " +
+            "GROUP BY DATE(flow_time) " +
+            "ORDER BY date ASC")
+    List<Map<String, Object>> getFlowTrend7Day();
+
+    /**
+     * 分页查询流量明细（首页表格用）
+     */
+    @Select("SELECT id, src_ip AS srcIp, dest_ip AS destIp, src_port AS srcPort, dest_port AS destPort, " +
+            "protocol, packet_size AS packetSize, is_abnormal AS isAbnormal, abnormal_type AS abnormalType, flow_time AS flowTime " +
+            "FROM network_flow_log " +
+            "ORDER BY flow_time DESC " +
+            "LIMIT #{offset}, #{pageSize}")
+    List<Map<String, Object>> getFlowListByPage(@Param("offset") int offset, @Param("pageSize") int pageSize);
+
+    /**
+     * 查询流量总条数（分页用）
+     */
+    @Select("SELECT COUNT(*) FROM network_flow_log")
+    int getFlowTotalCount();
+
+    /**
      * 删除指定时间之前的过期流量数据
      */
     @Delete("DELETE FROM network_flow_log WHERE flow_time < #{expireTime}")
     void deleteExpiredData(@Param("expireTime") LocalDateTime expireTime);
 
 
-    // tianjia
-    /**
-     * 查询指定时间范围内，每个源IP访问的不同端口数、总数据包数
-     * 只查未检测的正常流量，小范围扫描极快
-     */
-    @Select("SELECT src_ip AS srcIp, COUNT(DISTINCT dest_port) AS portCount, COUNT(*) AS packetCount " +
-            "FROM network_flow_log " +
-            "WHERE flow_time BETWEEN #{startTime} AND #{endTime} AND is_abnormal = 0 " +
-            "GROUP BY src_ip")
-    List<Map<String, Object>> selectIpPortStatByTime(@Param("startTime") LocalDateTime startTime,
-                                                     @Param("endTime") LocalDateTime endTime);
-
-    /**
-     * 批量标记指定IP、指定时间范围内的流量为异常
-     */
-    @Update("UPDATE network_flow_log SET is_abnormal = 1, abnormal_type = #{type} " +
-            "WHERE src_ip = #{srcIp} AND flow_time BETWEEN #{startTime} AND #{endTime} AND is_abnormal = 0")
-    void batchMarkAbnormalByTime(@Param("srcIp") String srcIp,
-                                 @Param("startTime") LocalDateTime startTime,
-                                 @Param("endTime") LocalDateTime endTime,
-                                 @Param("type") String type);
 }

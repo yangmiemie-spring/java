@@ -25,8 +25,8 @@ public class FlowTimedTask {
     private FlowStatCounterMapper statMapper;
 
     // 阈值调低，确保模拟流量必触发检测
-    private static final int SCAN_PORT_THRESHOLD = 3;
-    private static final int DDOS_PACKET_THRESHOLD = 50;
+    private static final int SCAN_PORT_THRESHOLD = 2;
+    private static final int DDOS_PACKET_THRESHOLD = 30;
     private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     /**

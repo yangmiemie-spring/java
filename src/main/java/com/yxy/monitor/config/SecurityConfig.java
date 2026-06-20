@@ -45,7 +45,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource(){
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of("http://localhost:8082"));
+        config.setAllowedOriginPatterns(List.of("http://localhost:*"));
         config.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
@@ -62,13 +62,11 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/login","/api/auth/register").permitAll()
-                        // 所有登录用户均可访问：修改密码
+                        // 改密码：只要登录就能访问，不分角色
                         .requestMatchers("/api/auth/updatePwd").authenticated()
-                        // 下面接口需要管理员admin角色
                         .requestMatchers("/api/blacklist/**","/api/whitelist/**","/api/user/**","/api/rule/**").hasRole("admin")
-                        // 首页、流量监测接口 登录就能看（user/admin都放行）
                         .requestMatchers("/api/dashboard/**","/api/flow/**").authenticated()
-                        .anyRequest().hasRole("admin")
+                        .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();

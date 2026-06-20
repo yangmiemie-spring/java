@@ -23,4 +23,6 @@ public interface FlowStatCounterMapper {
     // 重新计算占比
     @Update("UPDATE flow_stat_counter SET abnormal_rate = ROUND(abnormal_flow / total_flow * 100, 2) WHERE id = 1")
     void refreshRate();
+
+
 }
