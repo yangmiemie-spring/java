@@ -61,7 +61,7 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/login","/api/auth/register").permitAll()
+                        .requestMatchers("/api/auth/login","/api/auth/register", "/api/auth/test/pwd").permitAll()
                         // 改密码：只要登录就能访问，不分角色
                         .requestMatchers("/api/auth/updatePwd").authenticated()
                         .requestMatchers("/api/blacklist/**","/api/whitelist/**","/api/user/**","/api/rule/**").hasRole("admin")

@@ -71,9 +71,6 @@ public class FlowTimedTask {
                 long portCount = ((Number) stat.get("portCount")).longValue();
                 long packetCount = ((Number) stat.get("packetCount")).longValue();
 
-                log.info("检测明细 | IP={} | 分钟={} | 不同端口数={} | 总包数={}",
-                        srcIp, timeMinute, portCount, packetCount);
-
                 LocalDateTime minuteStart = LocalDateTime.parse(timeMinute + ":00", formatter);
                 LocalDateTime minuteEnd = minuteStart.plusMinutes(1);
 
@@ -82,8 +79,7 @@ public class FlowTimedTask {
                     flowLogMapper.batchMarkAbnormal(srcIp, minuteStart, minuteEnd, "scan");
                     totalAbnormalPackets += (int) packetCount;
                     scanCount++;
-                    log.info("  → 触发端口扫描 | IP={} | 分钟={} | 端口数={} | 包数={}",
-                            srcIp, timeMinute, portCount, packetCount);
+
                 }
 
                 // DDoS流量规则

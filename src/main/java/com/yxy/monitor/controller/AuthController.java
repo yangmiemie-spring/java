@@ -7,8 +7,10 @@ import com.yxy.monitor.entity.SysUser;
 import com.yxy.monitor.service.AuthService;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -19,6 +21,9 @@ import java.util.Map;
 public class AuthController {
     @Resource
     private AuthService authService;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     // 注册接口
     @PostMapping("/register")
@@ -53,5 +58,13 @@ public class AuthController {
     @GetMapping("/admin/test")
     public String adminOnly(){
         return "只有管理员能访问";
+    }
+
+    @GetMapping("/test/pwd")
+    public String testEncode() {
+        String rawPwd = "123456";
+        String hash = passwordEncoder.encode(rawPwd);
+        System.out.println("123456加密结果：" + hash);
+        return hash;
     }
 }
